@@ -10,8 +10,6 @@
         
         .card { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 20px; transition: all 0.5s ease; position: relative; display: none; }
         .card.active { display: block; animation: slideDown 0.5s ease-out; }
-        
-        /* Gelöste Aufgaben nach oben schieben / ausgrauen */
         .card.done { opacity: 0.6; border: 2px solid #2ecc71; transform: scale(0.98); background-color: #f9fff9; pointer-events: none; }
         
         @keyframes slideDown { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
@@ -133,28 +131,7 @@
         let current = [];
         let solved = 0;
         
-        // Sound Kontext (Lazy Init)
-        let audioCtx;
-        function playClick() {
-            if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            if(audioCtx.state === 'suspended') audioCtx.resume();
-            
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(800, audioCtx.currentTime);
-            osc.frequency.exponentialRampToValueAtTime(300, audioCtx.currentTime + 0.05);
-            
-            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.05);
-            
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
-            
-            osc.start();
-            osc.stop(audioCtx.currentTime + 0.05);
-        }
+        // Sound entfernt (Silent Mode)
 
         function initGame(mode = 'normal') {
             const c = document.getElementById('questions-container');
@@ -164,25 +141,20 @@
             current = [];
             solved = 0;
 
-            // 1. Filtern nach Typ
             const propTasks = tasks.filter(t => t.k === 'prop');
             const antiTasks = tasks.filter(t => t.k === 'anti');
 
-            // 2. Mischen
             propTasks.sort(() => Math.random() - 0.5);
             antiTasks.sort(() => Math.random() - 0.5);
 
-            // 3. Auswählen (Mind. 1 von jedem, gesamt 4)
             let selection = [];
-            selection.push(propTasks.pop()); // Garantiert Proportional
-            selection.push(antiTasks.pop()); // Garantiert Antiproportional
+            selection.push(propTasks.pop());
+            selection.push(antiTasks.pop());
             
-            // Rest auffüllen (Pool wieder mischen)
             let rest = [...propTasks, ...antiTasks].sort(() => Math.random() - 0.5);
             selection.push(rest.pop());
             selection.push(rest.pop());
 
-            // 4. Aufgaben mischen (damit Anti nicht immer an 2. Stelle ist)
             selection.sort(() => Math.random() - 0.5);
 
             selection.forEach((t, i) => {
@@ -337,8 +309,8 @@
             if(correct) {
                 msg.className = "msg-box msg-ok";
                 let text = q.k==='prop' 
-                    ? "Richtig! Es ist ein Dreisatz mit geradem Verhältnis (proportionaler Dreisatz: je mehr, desto mehr)."
-                    : "Richtig! Es ist ein Dreisatz mit ungeradem Verhältnis (antiproportionaler Dreisatz: je mehr, desto weniger).";
+                    ? "Richtig! Es ist ein Dreisatz mit geradem Verhältnis (proportional: je mehr, desto mehr)."
+                    : "Richtig! Es ist ein Dreisatz mit ungeradem Verhältnis (antiproportional: je mehr, desto weniger).";
                 msg.innerHTML = text;
                 msg.style.display = "block";
                 
@@ -409,7 +381,6 @@
                         if (solved < 4) {
                             let nextCard = document.getElementById(`card_${i+1}`);
                             nextCard.classList.add('active');
-                            // Automatisch scrollen zur neuen Aufgabe
                             nextCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
                         } else {
                             document.getElementById('reload-area').style.display = 'block';
@@ -425,12 +396,7 @@
         function resetColors(ids) { ids.forEach(id => { document.getElementById(id).classList.remove('is-valid', 'is-invalid'); }); }
         function markValid(id) { document.getElementById(id).classList.add('is-valid'); }
         function markInvalid(id) { document.getElementById(id).classList.add('is-invalid'); }
-        
-        function ci(v) { 
-            playClick(); // Sound abspielen
-            let d = document.getElementById('cdisp'); 
-            if(v==='C')d.value=''; else if(v==='='){try{d.value=eval(d.value)}catch{d.value='Err'}} else d.value+=v; 
-        }
+        function ci(v) { let d = document.getElementById('cdisp'); if(v==='C')d.value=''; else if(v==='='){try{d.value=eval(d.value)}catch{d.value='Err'}} else d.value+=v; }
 
         initGame('normal');
     </script>
