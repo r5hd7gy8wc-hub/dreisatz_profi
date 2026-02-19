@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Dreisatz-Profi</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background-color: #f0f4f8; color: #333; padding: 20px; max-width: 800px; margin: 0 auto; }
+        h1 { text-align: center; color: #2c3e50; font-weight: 600; margin-bottom: 5px; }
+        p.sub { text-align: center; color: #7f8c8d; margin-bottom: 30px; }
+        
+        .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 30px; transition: all 0.3s ease; position: relative; }
+        .scenario { font-size: 1.15em; line-height: 1.5; margin-bottom: 25px; background: #eef7ff; padding: 15px; border-left: 5px solid #3498db; border-radius: 6px; }
+        
+        .step-box { margin-bottom: 20px; padding: 15px; border: 1px solid #e0e0e0; border-radius: 8px; background: #fafafa; }
+        .step-title { font-weight: 700; color: #7f8c8d; margin-bottom: 12px; display: block; text-transform: uppercase; font-size: 0.85em; letter-spacing: 0.5px; }
+        
+        /* Flex-Layout Ansatz */
+        .ansatz-row { display: flex; align-items: center; gap: 5px; margin-bottom: 10px; font-size: 1em; }
+        .ansatz-label { width: 80px; font-weight: 600; color: #555; flex-shrink: 0; }
+        
+        /* Spaltenbreiten & Layout */
+        .col-arrow { width: 25px; display: flex; justify-content: center; flex-shrink: 0; }
+        .col-input { width: 75px; flex-shrink: 0; }
+        .col-unit-group { display: flex; align-items: center; flex-shrink: 0; white-space: nowrap; margin-left: 2px; }
+        .col-equals { width: 20px; text-align: center; flex-shrink: 0; }
+        
+        input { padding: 8px; border: 2px solid #ddd; border-radius: 6px; font-size: 16px; text-align: center; background: white; width: 100%; box-sizing: border-box; transition: all 0.2s; }
+        input:focus { border-color: #3498db; outline: none; }
+        input.text-input { text-align: left; }
+        input.disabled-x { background: #eee; color: #888; font-weight: bold; border-color: #ddd; }
+        
+        input.is-valid { border-color: #2ecc71; background-color: #eafaf1; }
+        input.is-invalid { border-color: #e74c3c; background-color: #fcebe9; }
+
+        /* Pfeile */
+        .arrow-icon { font-size: 1.4em; font-weight: bold; color: #2980b9; opacity: 0; transition: opacity 0.5s; line-height: 1; }
+        
+        /* Rechter Pfeil klebt an Einheit */
+        .unit-arrow-right { margin-left: 2px; }
+
+        .logic-check { background: #fff8e1; border: 2px solid #ffe082; padding: 15px; border-radius: 8px; text-align: center; margin-bottom: 20px; display: none; }
+        .logic-btn { background: white; border: 2px solid #ddd; padding: 10px 30px; border-radius: 25px; cursor: pointer; margin: 10px; font-weight: 600; font-size: 1.1em; transition: all 0.2s; color: #555; display: inline-block; min-width: 120px; }
+        .logic-btn:hover { background: #f5f5f5; border-color: #bbb; transform: translateY(-2px); }
+        
+        .msg-box { margin-top: 10px; font-size: 0.95em; padding: 8px; border-radius: 5px; display: none; }
+        .msg-err { color: #d32f2f; background: #ffebee; }
+        .msg-ok { color: #2e7d32; background: #e8f5e9; font-weight: bold; }
+
+        .locked-section { display: none; opacity: 0; transition: opacity 0.5s; }
+        .locked-section.visible { display: block; opacity: 1; }
+        
+        .fraction-container { display: flex; align-items: center; gap: 15px; font-size: 1.2em; font-weight: bold; margin-top: 10px; }
+        .fraction { display: inline-flex; flex-direction: column; align-items: center; }
+        .numerator { border-bottom: 2px solid #333; padding-bottom: 4px; display: flex; gap: 8px; justify-content: center; }
+        .denominator { padding-top: 4px; display: flex; justify-content: center; width: 100%; }
+
+        .check-btn { background-color: #7f8c8d; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 0.9em; font-weight: 600; margin-top: 5px; }
+        .action-btn { background-color: #3498db; color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-size: 16px; width: 100%; font-weight: 600; margin-top: 10px; box-shadow: 0 4px 0 #2980b9; }
+        .action-btn:active { transform: translateY(4px); box-shadow: none; }
+        .calc-toggle { background: #e67e22; color: white; border: none; padding: 8px 12px; border-radius: 6px; font-size: 0.8em; cursor: pointer; box-shadow: 0 3px 0 #d35400; }
+        .calc-toggle:active { transform: translateY(3px); box-shadow: none; }
+
+        #calc-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 2000; justify-content: center; align-items: center; }
+        .calculator { background: #2c3e50; padding: 20px; border-radius: 15px; width: 280px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .calc-display { width: 100%; height: 60px; background: #ecf0f1; margin-bottom: 15px; text-align: right; padding: 15px; box-sizing: border-box; font-size: 1.8em; border-radius: 8px; border: none; color: #333; }
+        .calc-keys { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+        .c-btn { background: #95a5a6; color: white; padding: 15px 0; border: none; border-radius: 8px; font-size: 1.2em; font-weight: bold; cursor: pointer; box-shadow: 0 4px 0 #7f8c8d; }
+        .c-btn:active { transform: translateY(4px); box-shadow: none; }
+        .op { background: #f39c12; box-shadow: 0 4px 0 #d35400; }
+        .eq { background: #27ae60; box-shadow: 0 4px 0 #219150; }
+        .clr { background: #c0392b; grid-column: span 4; box-shadow: 0 4px 0 #922b21; margin-bottom: 5px; }
+
+        #reload-area { text-align: center; display: none; margin-top: 40px; padding-bottom: 60px; }
+        .reload-btn { color: white; border: none; padding: 15px 30px; font-size: 1.1em; border-radius: 50px; cursor: pointer; font-weight: bold; margin: 10px; transition: transform 0.1s; }
+        .btn-normal { background: #27ae60; box-shadow: 0 5px 0 #219150; }
+        .btn-hard { background: #e74c3c; box-shadow: 0 5px 0 #c0392b; }
+        .reload-btn:active { transform: translateY(5px); box-shadow: none; }
+    </style>
+</head>
+<body>
+
+    <h1>Dreisatz-Profi 🧠✍️</h1>
+    <p class="sub">Schritt für Schritt zur richtigen Lösung</p>
+
+    <div id="questions-container"></div>
+
+    <div id="reload-area">
+        <h2>🎉 Großartig gemacht!</h2>
+        <p>Du hast alle Aufgaben gemeistert.</p>
+        <p>Wie möchtest du weitermachen?</p>
+        <button class="reload-btn btn-normal" onclick="initGame('normal')">Gleiches Level 🔁</button>
+        <button class="reload-btn btn-hard" onclick="initGame('hard')">Level 2: Profi (Schwerer) 🔥</button>
+    </div>
+
+    <div id="calc-modal">
+        <div class="calculator">
+            <div style="text-align:right; color:white; cursor:pointer; font-weight:bold; margin-bottom:10px;" onclick="document.getElementById('calc-modal').style.display='none'">✕ SCHLIESSEN</div>
+            <input type="text" id="cdisp" class="calc-display" readonly>
+            <div class="calc-keys">
+                <button class="c-btn clr" onclick="ci('C')">C</button>
+                <button class="c-btn" onclick="ci('7')">7</button><button class="c-btn" onclick="ci('8')">8</button><button class="c-btn" onclick="ci('9')">9</button><button class="c-btn op" onclick="ci('/')">÷</button>
+                <button class="c-btn" onclick="ci('4')">4</button><button class="c-btn" onclick="ci('5')">5</button><button class="c-btn" onclick="ci('6')">6</button><button class="c-btn op" onclick="ci('*')">×</button>
+                <button class="c-btn" onclick="ci('1')">1</button><button class="c-btn" onclick="ci('2')">2</button><button class="c-btn" onclick="ci('3')">3</button><button class="c-btn op" onclick="ci('-')">-</button>
+                <button class="c-btn" onclick="ci('0')">0</button><button class="c-btn" onclick="ci('.')">,</button><button class="c-btn eq" onclick="ci('=')">=</button><button class="c-btn op" onclick="ci('+')">+</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Datenbank mit Normal & Schwer Textvarianten
+        const tasks = [
+            { 
+                s:"Hauswirtschaft", 
+                t_norm: "Für {a1} Personen brauchst du {a2} g Nudeln.<br>Wie viel für {a3} Personen?", 
+                t_hard: "Wie viel Gramm Nudeln musst du für {a3} Personen kochen, wenn für {a1} Personen genau {a2} g eingeplant sind?",
+                k:"prop", u1:"Pers.", u2:"g", 
+                a1:[3,4,6,7], f:[120,150,80], tg:[5,9,11] 
+            },
+            { 
+                s:"Körperpflege", 
+                t_norm: "Ein {a1}-Liter Kanister Shampoo reicht {a2} Tage.<br>Wie lange reichen {a3} Liter?", 
+                t_hard: "Im Lager stehen {a3} Liter Shampoo. Wie viele Tage reicht dieser Vorrat, wenn ein {a1}-Liter Kanister für {a2} Tage genügt?",
+                k:"prop", u1:"Liter", u2:"Tage", 
+                a1:[3,5,6], f:[4,7,9], tg:[4,8,10] 
+            },
+            { 
+                s:"Pflege", 
+                t_norm: "{a1} Pfleger brauchen für die Reinigung {a2} Stunden.<br>Wie lange brauchen {a3} Pfleger?", 
+                t_hard: "Die Reinigung dauert mit {a1} Pflegekräften {a2} Stunden. Berechne die Dauer, wenn {a3} Pflegekräfte eingesetzt werden.",
+                k:"anti", u1:"Pfleger", u2:"Std.", 
+                man:true, p:[[3,8,4],[2,9,3],[3,10,5],[4,6,3],[3,12,4]] 
+            },
+            { 
+                s:"Hauswirtschaft", 
+                t_norm: "Für {a1} Liter Wasser brauchst du {a2} ml Reiniger.<br>Wie viel für {a3} Liter?", 
+                t_hard: "Auf der Flasche steht: {a2} ml Reiniger auf {a1} Liter Wasser. Du hast einen Eimer mit {a3} Litern. Wie viel Reiniger muss hinein?",
+                k:"prop", u1:"Liter", u2:"ml", 
+                a1:[3,6,8], f:[15,20,25], tg:[4,5,7] 
+            },
+            { 
+                s:"Hauswirtschaft", 
+                t_norm: "Ein Vorrat reicht für {a1} Bewohner {a2} Tage.<br>Wie lange reicht er für {a3} Bewohner?", 
+                t_hard: "Wie viele Tage reicht der Vorrat, wenn statt {a1} Bewohnern nun {a3} Bewohner davon essen, wobei er ursprünglich für {a2} Tage gereicht hätte?",
+                k:"anti", u1:"Bew.", u2:"Tage", 
+                man:true, p:[[6,10,5],[4,9,6],[10,6,12],[8,5,4]] 
+            },
+            { 
+                s:"Pflege", 
+                t_norm: "In {a1} Tabletten sind {a2} mg Wirkstoff.<br>Wie viel mg sind in {a3} Tabletten?", 
+                t_hard: "Der Patient soll {a3} Tabletten einnehmen. Wie viel mg Wirkstoff entspricht das, wenn {a1} Tabletten {a2} mg enthalten?",
+                k:"prop", u1:"Tabl.", u2:"mg", 
+                a1:[3,4,6], f:[25,40,75], tg:[2,5,7] 
+            }
+        ];
+
+        let current = [];
+        let solved = 0;
+        let currentMode = 'normal';
+
+        function initGame(mode = 'normal') {
+            currentMode = mode;
+            const c = document.getElementById('questions-container');
+            c.innerHTML = "";
+            document.getElementById('reload-area').style.display = 'none';
+            current = [];
+            solved = 0;
+
+            let pool = [...tasks].sort(()=>Math.random()-0.5).slice(0,4);
+            
+            pool.forEach((t, i) => {
+                let v = {};
+                if(t.man) {
+                    let p = t.p[Math.floor(Math.random()*t.p.length)];
+                    v.a1=p[0]; v.a2=p[1]; v.a3=p[2]; v.res=(v.a1*v.a2)/v.a3;
+                } else {
+                    v.a1 = t.a1[Math.floor(Math.random()*t.a1.length)];
+                    let fac = t.f[Math.floor(Math.random()*t.f.length)];
+                    v.a2 = v.a1 * fac;
+                    let tgs = t.tg.filter(x=>x!==v.a1);
+                    v.a3 = tgs[Math.floor(Math.random()*tgs.length)];
+                    v.res = (v.a2/v.a1)*v.a3;
+                }
+                
+                // Textwahl je nach Level
+                let rawText = (mode === 'hard') ? t.t_hard : t.t_norm;
+                let txt = rawText.replace("{a1}",v.a1).replace("{a2}",v.a2).replace("{a3}",v.a3);
+                
+                // Trendtext
+                let trendText = "";
+                if (v.a3 > v.a1) {
+                    trendText = `Mehr ${t.u1} -> Mehr oder weniger ${t.u2}?`;
+                } else {
+                    trendText = `Weniger ${t.u1} -> Mehr oder weniger ${t.u2}?`;
+                }
+
+                current.push({ ...t, v, id:i });
+
+                let html = `
+                <div class="card" id="card_${i}">
+                    <div style="font-weight:bold; color:#7f8c8d; margin-bottom:5px; text-transform:uppercase; font-size:0.9em;">Aufgabe ${i+1} (${t.s}):</div>
+                    <div class="scenario">${txt}</div>
+                    
+                    <div class="step-box" id="step1_${i}">
+                        <span class="step-title">1. Der Ansatz</span>
+                        
+                        <div class="ansatz-row">
+                            <div class="ansatz-label">Gegeben:</div>
+                            <div class="col-arrow"></div>
+                            <div class="col-input"><input type="number" id="i_${i}_a1"></div>
+                            <div class="col-unit-group"><span>${t.u1}</span></div>
+                            <div class="col-equals">≙</div>
+                            <div class="col-input"><input type="number" id="i_${i}_a2"></div>
+                            <div class="col-unit-group"><span>${t.u2}</span></div>
+                        </div>
+
+                        <div class="ansatz-row">
+                            <div class="ansatz-label">Gesucht:</div>
+                            <div class="col-arrow"><span class="arrow-icon" id="ar_in_${i}">⬆️</span></div>
+                            <div class="col-input"><input type="number" id="i_${i}_a3"></div>
+                            <div class="col-unit-group"><span>${t.u1}</span></div>
+                            <div class="col-equals">≙</div>
+                            <div class="col-input"><input type="text" value="x" disabled class="disabled-x"></div>
+                            <div class="col-unit-group"><span>${t.u2}</span><span class="arrow-icon unit-arrow-right" id="ar_out_${i}">⬆️</span></div>
+                        </div>
+
+                        <button class="check-btn" onclick="preCheckAnsatz(${i})" id="btn_ansatz_${i}">Ansatz prüfen ✔️</button>
+                        <div id="ansatz_msg_${i}" class="msg-box"></div>
+                    </div>
+
+                    <div id="logic_${i}" class="logic-check">
+                        <span style="font-weight:bold; color:#f57f17; display:block; margin-bottom:10px;">Vor dem Rechnen immer erst abschätzen:</span>
+                        <div style="margin-bottom:10px; font-weight:bold;">${trendText}</div>
+                        <button class="logic-btn" onclick="logic(${i}, 'more')">MEHR</button>
+                        <button class="logic-btn" onclick="logic(${i}, 'less')">WENIGER</button>
+                        <div id="logmsg_${i}" class="msg-box"></div>
+                    </div>
+
+                    <div id="lock_${i}" class="locked-section">
+                        <div class="step-box">
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <span class="step-title" style="margin:0;">2. Rechnung (Bruch)</span>
+                                <button class="calc-toggle" onclick="document.getElementById('calc-modal').style.display='flex'">🧮 Rechner</button>
+                            </div>
+                            <div class="fraction-container">
+                                <span>x = </span>
+                                <div class="fraction">
+                                    <div class="numerator">
+                                        <input type="number" id="i_${i}_b1" style="width:70px;"> • <input type="number" id="i_${i}_b2" style="width:70px;">
+                                    </div>
+                                    <div class="denominator">
+                                        <input type="number" id="i_${i}_b3" style="width:70px;">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="step-box">
+                            <span class="step-title">3. Ergebnis</span>
+                            <div style="font-size:1.1em; font-weight:bold;">
+                                x = <input type="number" id="i_${i}_res" style="width:100px;"> ${t.u2}
+                            </div>
+                        </div>
+
+                        <div class="step-box">
+                            <span class="step-title">4. Antwortsatz</span>
+                            <input type="text" id="i_${i}_txt" class="text-input" placeholder="Schreibe einen ganzen Satz...">
+                        </div>
+
+                        <button class="action-btn" onclick="check(${i})">Antwort prüfen</button>
+                        <div id="feed_${i}" class="msg-box" style="margin-top:15px; text-align:center;"></div>
+                    </div>
+                </div>`;
+                c.innerHTML += html;
+            });
+        }
+
+        function preCheckAnsatz(i) {
+            let q = current[i];
+            let a1 = parseFloat(document.getElementById(`i_${i}_a1`).value);
+            let a2 = parseFloat(document.getElementById(`i_${i}_a2`).value);
+            let a3 = parseFloat(document.getElementById(`i_${i}_a3`).value);
+            let msg = document.getElementById(`ansatz_msg_${i}`);
+
+            resetColors([`i_${i}_a1`, `i_${i}_a2`, `i_${i}_a3`]);
+
+            if (a1 === q.v.a1 && a2 === q.v.a2 && a3 === q.v.a3) {
+                msg.className = "msg-box msg-ok";
+                msg.innerHTML = "✅ Richtig! Weiter geht's...";
+                msg.style.display = "block";
+                document.getElementById(`btn_ansatz_${i}`).style.display = 'none'; 
+                
+                setTimeout(() => {
+                    msg.style.display = 'none';
+                    document.getElementById(`i_${i}_a1`).disabled = true;
+                    document.getElementById(`i_${i}_a2`).disabled = true;
+                    document.getElementById(`i_${i}_a3`).disabled = true;
+                    document.getElementById(`logic_${i}`).style.display = 'block';
+                }, 1000);
+            } else {
+                msg.className = "msg-box msg-err";
+                msg.innerHTML = "Das stimmt noch nicht. Überprüfe deine Eingaben.";
+                msg.style.display = "block";
+                if(a1 !== q.v.a1) markInvalid(`i_${i}_a1`);
+                if(a2 !== q.v.a2) markInvalid(`i_${i}_a2`);
+                if(a3 !== q.v.a3) markInvalid(`i_${i}_a3`);
+            }
+        }
+
+        function logic(i, choice) {
+            let q = current[i];
+            let resMore = q.v.res > q.v.a2;
+            let correct = (choice === 'more' && resMore) || (choice === 'less' && !resMore);
+            let msg = document.getElementById(`logmsg_${i}`);
+
+            if(correct) {
+                msg.className = "msg-box msg-ok";
+                let text = q.k==='prop' 
+                    ? "Richtig! Es ist ein Dreisatz mit geradem Verhältnis (proportionaler Dreisatz: je mehr, desto mehr)."
+                    : "Richtig! Es ist ein Dreisatz mit ungeradem Verhältnis (antiproportionaler Dreisatz: je mehr, desto weniger).";
+                msg.innerHTML = text;
+                msg.style.display = "block";
+                
+                let arIn = document.getElementById(`ar_in_${i}`);
+                let arOut = document.getElementById(`ar_out_${i}`);
+                
+                let leftUp = q.v.a3 > q.v.a1;
+                arIn.innerHTML = leftUp ? "⬆️" : "⬇️"; arIn.style.opacity = 1;
+
+                let rightUp = q.v.res > q.v.a2;
+                arOut.innerHTML = rightUp ? "⬆️" : "⬇️"; arOut.style.opacity = 1;
+
+                setTimeout(() => { document.getElementById(`lock_${i}`).classList.add('visible'); }, 2000);
+            } else {
+                msg.className = "msg-box msg-err";
+                msg.innerText = "Das passt noch nicht, überlege noch einmal genau.";
+                msg.style.display = "block";
+            }
+        }
+
+        function check(i) {
+            let q = current[i];
+            let b1El = document.getElementById(`i_${i}_b1`);
+            let b2El = document.getElementById(`i_${i}_b2`);
+            let b3El = document.getElementById(`i_${i}_b3`);
+            let resEl = document.getElementById(`i_${i}_res`);
+            
+            let b1 = parseFloat(b1El.value);
+            let b2 = parseFloat(b2El.value);
+            let b3 = parseFloat(b3El.value);
+            let res = parseFloat(resEl.value);
+            let txt = document.getElementById(`i_${i}_txt`).value.toLowerCase();
+
+            resetColors([`i_${i}_b1`, `i_${i}_b2`, `i_${i}_b3`, `i_${i}_res`]);
+
+            let err = [];
+            let targetNum1, targetNum2, targetDenom;
+            if (q.k === 'prop') {
+                targetNum1 = q.v.a2; targetNum2 = q.v.a3; targetDenom = q.v.a1;
+            } else {
+                targetNum1 = q.v.a1; targetNum2 = q.v.a2; targetDenom = q.v.a3;
+            }
+
+            if (b3 === targetDenom) markValid(`i_${i}_b3`); else markInvalid(`i_${i}_b3`);
+            let nums = [targetNum1, targetNum2];
+            if (nums.includes(b1)) markValid(`i_${i}_b1`); else markInvalid(`i_${i}_b1`);
+            if (nums.includes(b2)) markValid(`i_${i}_b2`); else markInvalid(`i_${i}_b2`);
+
+            let numOk = (nums.includes(b1) && nums.includes(b2));
+            if (b3 !== targetDenom || !numOk) err.push("Bruch enthält Fehler.");
+
+            if (Math.abs(res - q.v.res) < 0.01) markValid(`i_${i}_res`); 
+            else { markInvalid(`i_${i}_res`); err.push("Ergebnis falsch."); }
+
+            if (!txt.includes(Math.round(q.v.res)) && !txt.includes(q.v.res.toString().replace('.',','))) err.push("Antwortsatz unvollständig.");
+
+            let f = document.getElementById(`feed_${i}`);
+            if (err.length === 0) {
+                f.className = "msg-box msg-ok"; f.innerHTML = "Hervorragend! Alles richtig gelöst. 🌟"; f.style.display = "block";
+                if(!document.getElementById(`card_${i}`).classList.contains('done')) {
+                    document.getElementById(`card_${i}`).classList.add('done');
+                    solved++;
+                    if(solved===4) {
+                        document.getElementById('reload-area').style.display='block';
+                        setTimeout(() => window.scrollTo(0, document.body.scrollHeight), 500);
+                    }
+                }
+            } else {
+                f.className = "msg-box msg-err"; f.innerHTML = "Fehler:<br>• " + err.join("<br>• "); f.style.display = "block";
+            }
+        }
+
+        function resetColors(ids) { ids.forEach(id => { document.getElementById(id).classList.remove('is-valid', 'is-invalid'); }); }
+        function markValid(id) { document.getElementById(id).classList.add('is-valid'); }
+        function markInvalid(id) { document.getElementById(id).classList.add('is-invalid'); }
+        function ci(v) { let d = document.getElementById('cdisp'); if(v==='C')d.value=''; else if(v==='='){try{d.value=eval(d.value)}catch{d.value='Err'}} else d.value+=v; }
+
+        initGame();
+    </script>
+</body>
+</html>
