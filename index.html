@@ -5,15 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Dreisatz-Profi</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, sans-serif; background-color: #f0f4f8; color: #333; padding: 10px; max-width: 800px; margin: 0 auto; }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background-color: #f0f4f8; color: #333; padding: 10px; max-width: 800px; margin: 0 auto; padding-bottom: 200px; }
         h1 { text-align: center; color: #2c3e50; font-weight: 600; margin-bottom: 5px; font-size: 1.5em; }
         
-        .card { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 20px; transition: all 0.3s ease; position: relative; display: none; }
+        .card { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 20px; transition: all 0.5s ease; position: relative; display: none; }
         .card.active { display: block; animation: slideDown 0.5s ease-out; }
-        /* Gelöste Aufgaben bleiben sichtbar, aber dezent */
-        .card.done { opacity: 0.8; border: 2px solid #2ecc71; }
         
-        @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        /* Gelöste Aufgaben nach oben schieben / ausgrauen */
+        .card.done { opacity: 0.6; border: 2px solid #2ecc71; transform: scale(0.98); background-color: #f9fff9; pointer-events: none; }
+        
+        @keyframes slideDown { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 
         .scenario { font-size: 1.1em; line-height: 1.4; margin-bottom: 20px; background: #eef7ff; padding: 12px; border-left: 5px solid #3498db; border-radius: 6px; }
         
@@ -74,8 +75,8 @@
         .calculator { background: #2c3e50; padding: 15px; border-radius: 15px; width: 260px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
         .calc-display { width: 100%; height: 50px; background: #ecf0f1; margin-bottom: 10px; text-align: right; padding: 10px; box-sizing: border-box; font-size: 1.5em; border-radius: 8px; border: none; color: #333; }
         .calc-keys { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
-        .c-btn { background: #95a5a6; color: white; padding: 12px 0; border: none; border-radius: 8px; font-size: 1.2em; font-weight: bold; cursor: pointer; box-shadow: 0 3px 0 #7f8c8d; }
-        .c-btn:active { transform: translateY(3px); box-shadow: none; }
+        .c-btn { background: #95a5a6; color: white; padding: 12px 0; border: none; border-radius: 8px; font-size: 1.2em; font-weight: bold; cursor: pointer; box-shadow: 0 3px 0 #7f8c8d; transition: background 0.1s; }
+        .c-btn:active { transform: translateY(3px); box-shadow: none; background: #bdc3c7; }
         .op { background: #f39c12; box-shadow: 0 3px 0 #d35400; }
         .eq { background: #27ae60; box-shadow: 0 3px 0 #219150; }
         .clr { background: #c0392b; grid-column: span 4; box-shadow: 0 3px 0 #922b21; margin-bottom: 5px; }
@@ -131,7 +132,29 @@
 
         let current = [];
         let solved = 0;
-        let activeIndex = 0;
+        
+        // Sound Kontext (Lazy Init)
+        let audioCtx;
+        function playClick() {
+            if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if(audioCtx.state === 'suspended') audioCtx.resume();
+            
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(300, audioCtx.currentTime + 0.05);
+            
+            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.05);
+            
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.05);
+        }
 
         function initGame(mode = 'normal') {
             const c = document.getElementById('questions-container');
@@ -140,11 +163,29 @@
             document.getElementById('progress').style.width = '0%';
             current = [];
             solved = 0;
-            activeIndex = 0;
 
-            let pool = [...tasks].sort(()=>Math.random()-0.5).slice(0,4);
+            // 1. Filtern nach Typ
+            const propTasks = tasks.filter(t => t.k === 'prop');
+            const antiTasks = tasks.filter(t => t.k === 'anti');
+
+            // 2. Mischen
+            propTasks.sort(() => Math.random() - 0.5);
+            antiTasks.sort(() => Math.random() - 0.5);
+
+            // 3. Auswählen (Mind. 1 von jedem, gesamt 4)
+            let selection = [];
+            selection.push(propTasks.pop()); // Garantiert Proportional
+            selection.push(antiTasks.pop()); // Garantiert Antiproportional
             
-            pool.forEach((t, i) => {
+            // Rest auffüllen (Pool wieder mischen)
+            let rest = [...propTasks, ...antiTasks].sort(() => Math.random() - 0.5);
+            selection.push(rest.pop());
+            selection.push(rest.pop());
+
+            // 4. Aufgaben mischen (damit Anti nicht immer an 2. Stelle ist)
+            selection.sort(() => Math.random() - 0.5);
+
+            selection.forEach((t, i) => {
                 let v = {};
                 if(t.man) {
                     let p = t.p[Math.floor(Math.random()*t.p.length)];
@@ -160,7 +201,6 @@
                 
                 let rawText = (mode === 'hard') ? t.t_hard : t.t_norm;
                 let txt = rawText.replace("{a1}",v.a1).replace("{a2}",v.a2).replace("{a3}",v.a3);
-                
                 let trendText = v.a3 > v.a1 ? `Mehr ${t.u1} -> Mehr oder weniger ${t.u2}?` : `Weniger ${t.u1} -> Mehr oder weniger ${t.u2}?`;
 
                 current.push({ ...t, v, id:i });
@@ -179,13 +219,13 @@
                             <div class="ansatz-row">
                                 <span class="ansatz-label">Gegeben:</span>
                                 <div class="input-group">
-                                    <div style="width:25px;"></div> <!-- Spacer für Symmetrie -->
+                                    <div style="width:20px;"></div>
                                     <input type="number" id="i_${i}_a1" class="num-input">
                                     <span class="unit-text">${t.u1}</span>
                                     <span class="equals-sign">≙</span>
                                     <input type="number" id="i_${i}_a2" class="num-input">
                                     <span class="unit-text">${t.u2}</span>
-                                    <div style="width:25px;"></div>
+                                    <div style="width:20px;"></div>
                                 </div>
                             </div>
 
@@ -198,7 +238,7 @@
                                     <span class="equals-sign">≙</span>
                                     <input type="text" value="x" disabled class="num-input disabled-x">
                                     <span class="unit-text">${t.u2}</span>
-                                    <span class="arrow-icon" id="ar_out_${i}">⬆️</span>
+                                    <span class="arrow-icon" id="ar_out_${i}" style="margin-left:2px;">⬆️</span>
                                 </div>
                             </div>
                         </div>
@@ -297,8 +337,8 @@
             if(correct) {
                 msg.className = "msg-box msg-ok";
                 let text = q.k==='prop' 
-                    ? "Richtig! Es ist ein Dreisatz mit geradem Verhältnis (proportional: je mehr, desto mehr)."
-                    : "Richtig! Es ist ein Dreisatz mit ungeradem Verhältnis (antiproportional: je mehr, desto weniger).";
+                    ? "Richtig! Es ist ein Dreisatz mit geradem Verhältnis (proportionaler Dreisatz: je mehr, desto mehr)."
+                    : "Richtig! Es ist ein Dreisatz mit ungeradem Verhältnis (antiproportionaler Dreisatz: je mehr, desto weniger).";
                 msg.innerHTML = text;
                 msg.style.display = "block";
                 
@@ -359,24 +399,23 @@
             if (err.length === 0) {
                 f.className = "msg-box msg-ok"; f.innerHTML = "Hervorragend! Alles richtig gelöst. 🌟"; f.style.display = "block";
                 
-                // Card als gelöst markieren (bleibt sichtbar)
                 let card = document.getElementById(`card_${i}`);
                 if (!card.classList.contains('done')) {
                     card.classList.add('done');
                     solved++;
                     document.getElementById('progress').style.width = (solved/4*100) + '%';
                     
-                    // Nächste Karte anzeigen nach 1.5s (scrollen)
                     setTimeout(() => {
                         if (solved < 4) {
                             let nextCard = document.getElementById(`card_${i+1}`);
                             nextCard.classList.add('active');
-                            nextCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                            // Automatisch scrollen zur neuen Aufgabe
+                            nextCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
                         } else {
                             document.getElementById('reload-area').style.display = 'block';
                             document.getElementById('reload-area').scrollIntoView({ behavior: 'smooth' });
                         }
-                    }, 1500);
+                    }, 1000);
                 }
             } else {
                 f.className = "msg-box msg-err"; f.innerHTML = "Fehler:<br>• " + err.join("<br>• "); f.style.display = "block";
@@ -386,7 +425,12 @@
         function resetColors(ids) { ids.forEach(id => { document.getElementById(id).classList.remove('is-valid', 'is-invalid'); }); }
         function markValid(id) { document.getElementById(id).classList.add('is-valid'); }
         function markInvalid(id) { document.getElementById(id).classList.add('is-invalid'); }
-        function ci(v) { let d = document.getElementById('cdisp'); if(v==='C')d.value=''; else if(v==='='){try{d.value=eval(d.value)}catch{d.value='Err'}} else d.value+=v; }
+        
+        function ci(v) { 
+            playClick(); // Sound abspielen
+            let d = document.getElementById('cdisp'); 
+            if(v==='C')d.value=''; else if(v==='='){try{d.value=eval(d.value)}catch{d.value='Err'}} else d.value+=v; 
+        }
 
         initGame('normal');
     </script>
