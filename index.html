@@ -5,83 +5,95 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Dreisatz-Profi</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, sans-serif; background-color: #f0f4f8; color: #333; padding: 20px; max-width: 800px; margin: 0 auto; }
-        h1 { text-align: center; color: #2c3e50; font-weight: 600; margin-bottom: 5px; }
-        p.sub { text-align: center; color: #7f8c8d; margin-bottom: 30px; }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background-color: #f0f4f8; color: #333; padding: 10px; max-width: 800px; margin: 0 auto; }
+        h1 { text-align: center; color: #2c3e50; font-weight: 600; margin-bottom: 5px; font-size: 1.5em; }
         
-        .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 30px; transition: all 0.3s ease; position: relative; }
-        .scenario { font-size: 1.15em; line-height: 1.5; margin-bottom: 25px; background: #eef7ff; padding: 15px; border-left: 5px solid #3498db; border-radius: 6px; }
+        .card { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 20px; transition: all 0.3s ease; position: relative; display: none; }
+        .card.active { display: block; animation: slideDown 0.5s ease-out; }
+        /* Gelöste Aufgaben bleiben sichtbar, aber dezent */
+        .card.done { opacity: 0.8; border: 2px solid #2ecc71; }
         
-        .step-box { margin-bottom: 20px; padding: 15px; border: 1px solid #e0e0e0; border-radius: 8px; background: #fafafa; }
-        .step-title { font-weight: 700; color: #7f8c8d; margin-bottom: 12px; display: block; text-transform: uppercase; font-size: 0.85em; letter-spacing: 0.5px; }
+        @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .scenario { font-size: 1.1em; line-height: 1.4; margin-bottom: 20px; background: #eef7ff; padding: 12px; border-left: 5px solid #3498db; border-radius: 6px; }
         
-        /* Flex-Layout Ansatz */
-        .ansatz-row { display: flex; align-items: center; gap: 5px; margin-bottom: 10px; font-size: 1em; }
-        .ansatz-label { width: 80px; font-weight: 600; color: #555; flex-shrink: 0; }
+        .step-box { margin-bottom: 15px; padding: 10px; border: 1px solid #e0e0e0; border-radius: 8px; background: #fafafa; }
+        .step-title { font-weight: 700; color: #7f8c8d; margin-bottom: 10px; display: block; text-transform: uppercase; font-size: 0.8em; letter-spacing: 0.5px; }
         
-        /* Spaltenbreiten & Layout */
-        .col-arrow { width: 25px; display: flex; justify-content: center; flex-shrink: 0; }
-        .col-input { width: 75px; flex-shrink: 0; }
-        .col-unit-group { display: flex; align-items: center; flex-shrink: 0; white-space: nowrap; margin-left: 2px; }
-        .col-equals { width: 20px; text-align: center; flex-shrink: 0; }
+        /* Flexibles Ansatz-Layout */
+        .ansatz-container { display: flex; flex-direction: column; gap: 8px; }
+        .ansatz-row { display: flex; align-items: center; justify-content: flex-start; gap: 5px; font-size: 1em; white-space: nowrap; flex-wrap: wrap; }
+        .ansatz-label { width: 70px; font-weight: 600; color: #555; flex-shrink: 0; }
         
-        input { padding: 8px; border: 2px solid #ddd; border-radius: 6px; font-size: 16px; text-align: center; background: white; width: 100%; box-sizing: border-box; transition: all 0.2s; }
+        /* Input Gruppen */
+        .input-group { display: flex; align-items: center; gap: 3px; }
+        
+        input { padding: 8px 4px; border: 2px solid #ddd; border-radius: 6px; font-size: 16px; text-align: center; background: white; transition: all 0.2s; }
         input:focus { border-color: #3498db; outline: none; }
-        input.text-input { text-align: left; }
+        input.num-input { width: 60px; min-width: 50px; }
+        input.text-input { width: 100%; text-align: left; }
         input.disabled-x { background: #eee; color: #888; font-weight: bold; border-color: #ddd; }
         
         input.is-valid { border-color: #2ecc71; background-color: #eafaf1; }
         input.is-invalid { border-color: #e74c3c; background-color: #fcebe9; }
 
-        /* Pfeile */
-        .arrow-icon { font-size: 1.4em; font-weight: bold; color: #2980b9; opacity: 0; transition: opacity 0.5s; line-height: 1; }
-        
-        /* Rechter Pfeil klebt an Einheit */
-        .unit-arrow-right { margin-left: 2px; }
+        /* Entspricht-Zeichen */
+        .equals-sign { font-size: 1.4em; font-weight: bold; margin: 0 8px; vertical-align: middle; }
 
-        .logic-check { background: #fff8e1; border: 2px solid #ffe082; padding: 15px; border-radius: 8px; text-align: center; margin-bottom: 20px; display: none; }
-        .logic-btn { background: white; border: 2px solid #ddd; padding: 10px 30px; border-radius: 25px; cursor: pointer; margin: 10px; font-weight: 600; font-size: 1.1em; transition: all 0.2s; color: #555; display: inline-block; min-width: 120px; }
-        .logic-btn:hover { background: #f5f5f5; border-color: #bbb; transform: translateY(-2px); }
+        /* Pfeile */
+        .arrow-icon { font-size: 1.4em; font-weight: bold; color: #2980b9; opacity: 0; transition: opacity 0.5s; width: 25px; text-align: center; display: inline-block; }
+        .unit-text { font-size: 0.95em; margin: 0 2px; }
+
+        /* Logik-Check */
+        .logic-check { background: #fff8e1; border: 2px solid #ffe082; padding: 10px; border-radius: 8px; text-align: center; margin-bottom: 20px; display: none; }
+        .logic-btn-container { display: flex; gap: 10px; justify-content: center; margin-top: 10px; }
+        .logic-btn { flex: 1; background: white; border: 2px solid #ddd; padding: 12px 5px; border-radius: 25px; cursor: pointer; font-weight: 600; font-size: 0.95em; transition: all 0.2s; color: #555; max-width: 150px; white-space: nowrap; }
+        .logic-btn:hover { background: #f5f5f5; border-color: #bbb; }
         
-        .msg-box { margin-top: 10px; font-size: 0.95em; padding: 8px; border-radius: 5px; display: none; }
+        .msg-box { margin-top: 10px; font-size: 0.9em; padding: 8px; border-radius: 5px; display: none; }
         .msg-err { color: #d32f2f; background: #ffebee; }
         .msg-ok { color: #2e7d32; background: #e8f5e9; font-weight: bold; }
 
         .locked-section { display: none; opacity: 0; transition: opacity 0.5s; }
         .locked-section.visible { display: block; opacity: 1; }
         
-        .fraction-container { display: flex; align-items: center; gap: 15px; font-size: 1.2em; font-weight: bold; margin-top: 10px; }
+        /* Bruch zentriert */
+        .fraction-container { display: flex; align-items: center; gap: 10px; font-size: 1.1em; font-weight: bold; margin-top: 5px; justify-content: flex-start; }
         .fraction { display: inline-flex; flex-direction: column; align-items: center; }
-        .numerator { border-bottom: 2px solid #333; padding-bottom: 4px; display: flex; gap: 8px; justify-content: center; }
+        .numerator { border-bottom: 2px solid #333; padding-bottom: 4px; display: flex; gap: 5px; justify-content: center; }
         .denominator { padding-top: 4px; display: flex; justify-content: center; width: 100%; }
 
-        .check-btn { background-color: #7f8c8d; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 0.9em; font-weight: 600; margin-top: 5px; }
-        .action-btn { background-color: #3498db; color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-size: 16px; width: 100%; font-weight: 600; margin-top: 10px; box-shadow: 0 4px 0 #2980b9; }
+        .check-btn { background-color: #7f8c8d; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 0.9em; font-weight: 600; margin-top: 5px; width: 100%; }
+        .action-btn { background-color: #3498db; color: white; border: none; padding: 12px; border-radius: 6px; cursor: pointer; font-size: 16px; width: 100%; font-weight: 600; margin-top: 10px; box-shadow: 0 4px 0 #2980b9; }
         .action-btn:active { transform: translateY(4px); box-shadow: none; }
-        .calc-toggle { background: #e67e22; color: white; border: none; padding: 8px 12px; border-radius: 6px; font-size: 0.8em; cursor: pointer; box-shadow: 0 3px 0 #d35400; }
-        .calc-toggle:active { transform: translateY(3px); box-shadow: none; }
+        
+        .calc-toggle { background: #e67e22; color: white; border: none; padding: 6px 10px; border-radius: 6px; font-size: 0.8em; cursor: pointer; box-shadow: 0 3px 0 #d35400; margin-left: auto; }
 
+        /* Rechner Modal */
         #calc-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 2000; justify-content: center; align-items: center; }
-        .calculator { background: #2c3e50; padding: 20px; border-radius: 15px; width: 280px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-        .calc-display { width: 100%; height: 60px; background: #ecf0f1; margin-bottom: 15px; text-align: right; padding: 15px; box-sizing: border-box; font-size: 1.8em; border-radius: 8px; border: none; color: #333; }
-        .calc-keys { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
-        .c-btn { background: #95a5a6; color: white; padding: 15px 0; border: none; border-radius: 8px; font-size: 1.2em; font-weight: bold; cursor: pointer; box-shadow: 0 4px 0 #7f8c8d; }
-        .c-btn:active { transform: translateY(4px); box-shadow: none; }
-        .op { background: #f39c12; box-shadow: 0 4px 0 #d35400; }
-        .eq { background: #27ae60; box-shadow: 0 4px 0 #219150; }
-        .clr { background: #c0392b; grid-column: span 4; box-shadow: 0 4px 0 #922b21; margin-bottom: 5px; }
+        .calculator { background: #2c3e50; padding: 15px; border-radius: 15px; width: 260px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .calc-display { width: 100%; height: 50px; background: #ecf0f1; margin-bottom: 10px; text-align: right; padding: 10px; box-sizing: border-box; font-size: 1.5em; border-radius: 8px; border: none; color: #333; }
+        .calc-keys { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+        .c-btn { background: #95a5a6; color: white; padding: 12px 0; border: none; border-radius: 8px; font-size: 1.2em; font-weight: bold; cursor: pointer; box-shadow: 0 3px 0 #7f8c8d; }
+        .c-btn:active { transform: translateY(3px); box-shadow: none; }
+        .op { background: #f39c12; box-shadow: 0 3px 0 #d35400; }
+        .eq { background: #27ae60; box-shadow: 0 3px 0 #219150; }
+        .clr { background: #c0392b; grid-column: span 4; box-shadow: 0 3px 0 #922b21; margin-bottom: 5px; }
 
         #reload-area { text-align: center; display: none; margin-top: 40px; padding-bottom: 60px; }
-        .reload-btn { color: white; border: none; padding: 15px 30px; font-size: 1.1em; border-radius: 50px; cursor: pointer; font-weight: bold; margin: 10px; transition: transform 0.1s; }
+        .reload-btn { color: white; border: none; padding: 15px 30px; font-size: 1.1em; border-radius: 50px; cursor: pointer; font-weight: bold; margin: 10px; transition: transform 0.1s; display: block; width: 100%; max-width: 300px; margin: 10px auto; }
         .btn-normal { background: #27ae60; box-shadow: 0 5px 0 #219150; }
         .btn-hard { background: #e74c3c; box-shadow: 0 5px 0 #c0392b; }
         .reload-btn:active { transform: translateY(5px); box-shadow: none; }
+        
+        .progress-bar { height: 5px; background: #e0e0e0; margin-bottom: 20px; border-radius: 3px; overflow: hidden; }
+        .progress-fill { height: 100%; background: #3498db; width: 0%; transition: width 0.3s; }
     </style>
 </head>
 <body>
 
     <h1>Dreisatz-Profi 🧠✍️</h1>
-    <p class="sub">Schritt für Schritt zur richtigen Lösung</p>
+    <div class="progress-bar"><div id="progress" class="progress-fill"></div></div>
 
     <div id="questions-container"></div>
 
@@ -108,63 +120,27 @@
     </div>
 
     <script>
-        // Datenbank mit Normal & Schwer Textvarianten
         const tasks = [
-            { 
-                s:"Hauswirtschaft", 
-                t_norm: "Für {a1} Personen brauchst du {a2} g Nudeln.<br>Wie viel für {a3} Personen?", 
-                t_hard: "Wie viel Gramm Nudeln musst du für {a3} Personen kochen, wenn für {a1} Personen genau {a2} g eingeplant sind?",
-                k:"prop", u1:"Pers.", u2:"g", 
-                a1:[3,4,6,7], f:[120,150,80], tg:[5,9,11] 
-            },
-            { 
-                s:"Körperpflege", 
-                t_norm: "Ein {a1}-Liter Kanister Shampoo reicht {a2} Tage.<br>Wie lange reichen {a3} Liter?", 
-                t_hard: "Im Lager stehen {a3} Liter Shampoo. Wie viele Tage reicht dieser Vorrat, wenn ein {a1}-Liter Kanister für {a2} Tage genügt?",
-                k:"prop", u1:"Liter", u2:"Tage", 
-                a1:[3,5,6], f:[4,7,9], tg:[4,8,10] 
-            },
-            { 
-                s:"Pflege", 
-                t_norm: "{a1} Pfleger brauchen für die Reinigung {a2} Stunden.<br>Wie lange brauchen {a3} Pfleger?", 
-                t_hard: "Die Reinigung dauert mit {a1} Pflegekräften {a2} Stunden. Berechne die Dauer, wenn {a3} Pflegekräfte eingesetzt werden.",
-                k:"anti", u1:"Pfleger", u2:"Std.", 
-                man:true, p:[[3,8,4],[2,9,3],[3,10,5],[4,6,3],[3,12,4]] 
-            },
-            { 
-                s:"Hauswirtschaft", 
-                t_norm: "Für {a1} Liter Wasser brauchst du {a2} ml Reiniger.<br>Wie viel für {a3} Liter?", 
-                t_hard: "Auf der Flasche steht: {a2} ml Reiniger auf {a1} Liter Wasser. Du hast einen Eimer mit {a3} Litern. Wie viel Reiniger muss hinein?",
-                k:"prop", u1:"Liter", u2:"ml", 
-                a1:[3,6,8], f:[15,20,25], tg:[4,5,7] 
-            },
-            { 
-                s:"Hauswirtschaft", 
-                t_norm: "Ein Vorrat reicht für {a1} Bewohner {a2} Tage.<br>Wie lange reicht er für {a3} Bewohner?", 
-                t_hard: "Wie viele Tage reicht der Vorrat, wenn statt {a1} Bewohnern nun {a3} Bewohner davon essen, wobei er ursprünglich für {a2} Tage gereicht hätte?",
-                k:"anti", u1:"Bew.", u2:"Tage", 
-                man:true, p:[[6,10,5],[4,9,6],[10,6,12],[8,5,4]] 
-            },
-            { 
-                s:"Pflege", 
-                t_norm: "In {a1} Tabletten sind {a2} mg Wirkstoff.<br>Wie viel mg sind in {a3} Tabletten?", 
-                t_hard: "Der Patient soll {a3} Tabletten einnehmen. Wie viel mg Wirkstoff entspricht das, wenn {a1} Tabletten {a2} mg enthalten?",
-                k:"prop", u1:"Tabl.", u2:"mg", 
-                a1:[3,4,6], f:[25,40,75], tg:[2,5,7] 
-            }
+            { s:"Hauswirtschaft", t_norm: "Für {a1} Personen brauchst du {a2} g Nudeln.<br>Wie viel für {a3} Personen?", t_hard: "Wie viel Gramm Nudeln musst du für {a3} Personen kochen, wenn für {a1} Personen genau {a2} g eingeplant sind?", k:"prop", u1:"Pers.", u2:"g", a1:[3,4,6,7], f:[120,150,80], tg:[5,9,11] },
+            { s:"Körperpflege", t_norm: "Ein {a1}-Liter Kanister Shampoo reicht {a2} Tage.<br>Wie lange reichen {a3} Liter?", t_hard: "Im Lager stehen {a3} Liter Shampoo. Wie viele Tage reicht dieser Vorrat, wenn ein {a1}-Liter Kanister für {a2} Tage genügt?", k:"prop", u1:"Liter", u2:"Tage", a1:[3,5,6], f:[4,7,9], tg:[4,8,10] },
+            { s:"Pflege", t_norm: "{a1} Pfleger brauchen für die Reinigung {a2} Stunden.<br>Wie lange brauchen {a3} Pfleger?", t_hard: "Die Reinigung dauert mit {a1} Pflegekräften {a2} Stunden. Berechne die Dauer, wenn {a3} Pflegekräfte eingesetzt werden.", k:"anti", u1:"Pfleger", u2:"Std.", man:true, p:[[3,8,4],[2,9,3],[3,10,5],[4,6,3],[3,12,4]] },
+            { s:"Hauswirtschaft", t_norm: "Für {a1} Liter Wasser brauchst du {a2} ml Reiniger.<br>Wie viel für {a3} Liter?", t_hard: "Auf der Flasche steht: {a2} ml Reiniger auf {a1} Liter Wasser. Du hast einen Eimer mit {a3} Litern. Wie viel Reiniger muss hinein?", k:"prop", u1:"Liter", u2:"ml", a1:[3,6,8], f:[15,20,25], tg:[4,5,7] },
+            { s:"Hauswirtschaft", t_norm: "Ein Vorrat reicht für {a1} Bewohner {a2} Tage.<br>Wie lange reicht er für {a3} Bewohner?", t_hard: "Wie viele Tage reicht der Vorrat, wenn statt {a1} Bewohnern nun {a3} Bewohner davon essen, wobei er ursprünglich für {a2} Tage gereicht hätte?", k:"anti", u1:"Bew.", u2:"Tage", man:true, p:[[6,10,5],[4,9,6],[10,6,12],[8,5,4]] },
+            { s:"Pflege", t_norm: "In {a1} Tabletten sind {a2} mg Wirkstoff.<br>Wie viel mg sind in {a3} Tabletten?", t_hard: "Der Patient soll {a3} Tabletten einnehmen. Wie viel mg Wirkstoff entspricht das, wenn {a1} Tabletten {a2} mg enthalten?", k:"prop", u1:"Tabl.", u2:"mg", a1:[3,4,6], f:[25,40,75], tg:[2,5,7] }
         ];
 
         let current = [];
         let solved = 0;
-        let currentMode = 'normal';
+        let activeIndex = 0;
 
         function initGame(mode = 'normal') {
-            currentMode = mode;
             const c = document.getElementById('questions-container');
             c.innerHTML = "";
             document.getElementById('reload-area').style.display = 'none';
+            document.getElementById('progress').style.width = '0%';
             current = [];
             solved = 0;
+            activeIndex = 0;
 
             let pool = [...tasks].sort(()=>Math.random()-0.5).slice(0,4);
             
@@ -182,46 +158,49 @@
                     v.res = (v.a2/v.a1)*v.a3;
                 }
                 
-                // Textwahl je nach Level
                 let rawText = (mode === 'hard') ? t.t_hard : t.t_norm;
                 let txt = rawText.replace("{a1}",v.a1).replace("{a2}",v.a2).replace("{a3}",v.a3);
                 
-                // Trendtext
-                let trendText = "";
-                if (v.a3 > v.a1) {
-                    trendText = `Mehr ${t.u1} -> Mehr oder weniger ${t.u2}?`;
-                } else {
-                    trendText = `Weniger ${t.u1} -> Mehr oder weniger ${t.u2}?`;
-                }
+                let trendText = v.a3 > v.a1 ? `Mehr ${t.u1} -> Mehr oder weniger ${t.u2}?` : `Weniger ${t.u1} -> Mehr oder weniger ${t.u2}?`;
 
                 current.push({ ...t, v, id:i });
 
+                let isActive = (i === 0) ? 'active' : '';
+
                 let html = `
-                <div class="card" id="card_${i}">
-                    <div style="font-weight:bold; color:#7f8c8d; margin-bottom:5px; text-transform:uppercase; font-size:0.9em;">Aufgabe ${i+1} (${t.s}):</div>
+                <div class="card ${isActive}" id="card_${i}">
+                    <div style="font-weight:bold; color:#7f8c8d; margin-bottom:5px; text-transform:uppercase; font-size:0.9em;">Aufgabe ${i+1} von 4 (${t.s}):</div>
                     <div class="scenario">${txt}</div>
                     
                     <div class="step-box" id="step1_${i}">
                         <span class="step-title">1. Der Ansatz</span>
                         
-                        <div class="ansatz-row">
-                            <div class="ansatz-label">Gegeben:</div>
-                            <div class="col-arrow"></div>
-                            <div class="col-input"><input type="number" id="i_${i}_a1"></div>
-                            <div class="col-unit-group"><span>${t.u1}</span></div>
-                            <div class="col-equals">≙</div>
-                            <div class="col-input"><input type="number" id="i_${i}_a2"></div>
-                            <div class="col-unit-group"><span>${t.u2}</span></div>
-                        </div>
+                        <div class="ansatz-container">
+                            <div class="ansatz-row">
+                                <span class="ansatz-label">Gegeben:</span>
+                                <div class="input-group">
+                                    <div style="width:25px;"></div> <!-- Spacer für Symmetrie -->
+                                    <input type="number" id="i_${i}_a1" class="num-input">
+                                    <span class="unit-text">${t.u1}</span>
+                                    <span class="equals-sign">≙</span>
+                                    <input type="number" id="i_${i}_a2" class="num-input">
+                                    <span class="unit-text">${t.u2}</span>
+                                    <div style="width:25px;"></div>
+                                </div>
+                            </div>
 
-                        <div class="ansatz-row">
-                            <div class="ansatz-label">Gesucht:</div>
-                            <div class="col-arrow"><span class="arrow-icon" id="ar_in_${i}">⬆️</span></div>
-                            <div class="col-input"><input type="number" id="i_${i}_a3"></div>
-                            <div class="col-unit-group"><span>${t.u1}</span></div>
-                            <div class="col-equals">≙</div>
-                            <div class="col-input"><input type="text" value="x" disabled class="disabled-x"></div>
-                            <div class="col-unit-group"><span>${t.u2}</span><span class="arrow-icon unit-arrow-right" id="ar_out_${i}">⬆️</span></div>
+                            <div class="ansatz-row">
+                                <span class="ansatz-label">Gesucht:</span>
+                                <div class="input-group">
+                                    <span class="arrow-icon" id="ar_in_${i}">⬆️</span>
+                                    <input type="number" id="i_${i}_a3" class="num-input">
+                                    <span class="unit-text">${t.u1}</span>
+                                    <span class="equals-sign">≙</span>
+                                    <input type="text" value="x" disabled class="num-input disabled-x">
+                                    <span class="unit-text">${t.u2}</span>
+                                    <span class="arrow-icon" id="ar_out_${i}">⬆️</span>
+                                </div>
+                            </div>
                         </div>
 
                         <button class="check-btn" onclick="preCheckAnsatz(${i})" id="btn_ansatz_${i}">Ansatz prüfen ✔️</button>
@@ -229,10 +208,12 @@
                     </div>
 
                     <div id="logic_${i}" class="logic-check">
-                        <span style="font-weight:bold; color:#f57f17; display:block; margin-bottom:10px;">Vor dem Rechnen immer erst abschätzen:</span>
-                        <div style="margin-bottom:10px; font-weight:bold;">${trendText}</div>
-                        <button class="logic-btn" onclick="logic(${i}, 'more')">MEHR</button>
-                        <button class="logic-btn" onclick="logic(${i}, 'less')">WENIGER</button>
+                        <span style="font-weight:bold; color:#f57f17; display:block; margin-bottom:5px;">Vor dem Rechnen abschätzen:</span>
+                        <div style="margin-bottom:10px;">${trendText}</div>
+                        <div class="logic-btn-container">
+                            <button class="logic-btn" onclick="logic(${i}, 'more')">MEHR</button>
+                            <button class="logic-btn" onclick="logic(${i}, 'less')">WENIGER</button>
+                        </div>
                         <div id="logmsg_${i}" class="msg-box"></div>
                     </div>
 
@@ -246,10 +227,10 @@
                                 <span>x = </span>
                                 <div class="fraction">
                                     <div class="numerator">
-                                        <input type="number" id="i_${i}_b1" style="width:70px;"> • <input type="number" id="i_${i}_b2" style="width:70px;">
+                                        <input type="number" id="i_${i}_b1" class="num-input"> • <input type="number" id="i_${i}_b2" class="num-input">
                                     </div>
                                     <div class="denominator">
-                                        <input type="number" id="i_${i}_b3" style="width:70px;">
+                                        <input type="number" id="i_${i}_b3" class="num-input">
                                     </div>
                                 </div>
                             </div>
@@ -264,7 +245,7 @@
 
                         <div class="step-box">
                             <span class="step-title">4. Antwortsatz</span>
-                            <input type="text" id="i_${i}_txt" class="text-input" placeholder="Schreibe einen ganzen Satz...">
+                            <input type="text" id="i_${i}_txt" class="text-input" placeholder="Ganzen Satz schreiben...">
                         </div>
 
                         <button class="action-btn" onclick="check(${i})">Antwort prüfen</button>
@@ -316,8 +297,8 @@
             if(correct) {
                 msg.className = "msg-box msg-ok";
                 let text = q.k==='prop' 
-                    ? "Richtig! Es ist ein Dreisatz mit geradem Verhältnis (proportionaler Dreisatz: je mehr, desto mehr)."
-                    : "Richtig! Es ist ein Dreisatz mit ungeradem Verhältnis (antiproportionaler Dreisatz: je mehr, desto weniger).";
+                    ? "Richtig! Es ist ein Dreisatz mit geradem Verhältnis (proportional: je mehr, desto mehr)."
+                    : "Richtig! Es ist ein Dreisatz mit ungeradem Verhältnis (antiproportional: je mehr, desto weniger).";
                 msg.innerHTML = text;
                 msg.style.display = "block";
                 
@@ -377,13 +358,25 @@
             let f = document.getElementById(`feed_${i}`);
             if (err.length === 0) {
                 f.className = "msg-box msg-ok"; f.innerHTML = "Hervorragend! Alles richtig gelöst. 🌟"; f.style.display = "block";
-                if(!document.getElementById(`card_${i}`).classList.contains('done')) {
-                    document.getElementById(`card_${i}`).classList.add('done');
+                
+                // Card als gelöst markieren (bleibt sichtbar)
+                let card = document.getElementById(`card_${i}`);
+                if (!card.classList.contains('done')) {
+                    card.classList.add('done');
                     solved++;
-                    if(solved===4) {
-                        document.getElementById('reload-area').style.display='block';
-                        setTimeout(() => window.scrollTo(0, document.body.scrollHeight), 500);
-                    }
+                    document.getElementById('progress').style.width = (solved/4*100) + '%';
+                    
+                    // Nächste Karte anzeigen nach 1.5s (scrollen)
+                    setTimeout(() => {
+                        if (solved < 4) {
+                            let nextCard = document.getElementById(`card_${i+1}`);
+                            nextCard.classList.add('active');
+                            nextCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        } else {
+                            document.getElementById('reload-area').style.display = 'block';
+                            document.getElementById('reload-area').scrollIntoView({ behavior: 'smooth' });
+                        }
+                    }, 1500);
                 }
             } else {
                 f.className = "msg-box msg-err"; f.innerHTML = "Fehler:<br>• " + err.join("<br>• "); f.style.display = "block";
@@ -395,7 +388,7 @@
         function markInvalid(id) { document.getElementById(id).classList.add('is-invalid'); }
         function ci(v) { let d = document.getElementById('cdisp'); if(v==='C')d.value=''; else if(v==='='){try{d.value=eval(d.value)}catch{d.value='Err'}} else d.value+=v; }
 
-        initGame();
+        initGame('normal');
     </script>
 </body>
 </html>
